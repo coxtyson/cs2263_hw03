@@ -3,15 +3,21 @@
  */
 package cs2263_hw03;
 
+
+import javafx.application.Application;
+
 /**
  * Represents the appliction
  */
 public class App {
+    static private CourseProcessor processor;
+
     /**
      * The application entrypoint
      * @param args The cli args
      */
     public static void main(String[] args) {
-        return;
+        processor = new CourseProcessor();
+        Application.launch(processor.getClass(), args);
     }
 }
