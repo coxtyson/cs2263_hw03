@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v0.0.1]
+## [v0.1.0] - 2022-2-27
+### Added
+- Implemented application
+
+### Changed
+- Added date to previous changelog header
+
+## [v0.0.1] - 2022-2-16
 ### Added
 - JavaFX dependency
 - Gson dependency
