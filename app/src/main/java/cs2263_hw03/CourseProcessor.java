@@ -1,3 +1,26 @@
+/**
+ * MIT License
+ *
+ * Copyright (c) 2022 Tyson Cox
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package cs2263_hw03;
 
 import javafx.application.Application;
@@ -23,18 +46,17 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Manages the course objects
+ * Manages the course objects and contains the ui
  * @author Tyson Cox
  */
 public class CourseProcessor extends Application {
     private List<Course> courses;
-    private ObservableList<Course> selectedCourses;
-    private TableView<Course> courseTable;
+    private final ObservableList<Course> selectedCourses;
 
     private TextField fldNum;
     private TextField fldName;
     private TextField fldCred;
-    private ChoiceBox<String> departmentsDrop;
+    private ComboBox<String> departmentsDrop;
 
     public CourseProcessor() {
         courses = new ArrayList<>();
@@ -42,7 +64,7 @@ public class CourseProcessor extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
         primaryStage.setTitle("Course Editor");
 
         HBox centersplit = new HBox();
@@ -53,13 +75,13 @@ public class CourseProcessor extends Application {
         editorControls.setVgap(10);
         editorControls.setPadding(new Insets(10, 10, 0, 10));
 
-        departmentsDrop = new ChoiceBox<>();
-        departmentsDrop.getItems().addAll(Course.departments);
+        departmentsDrop = new ComboBox<>();
+        departmentsDrop.getItems().addAll(Course.departmentNames);
         Button btnShowDept = new Button("Display (dept.)");
         Button btnShowAll = new Button("Display (all)");
         editorControls.addRow(0, departmentsDrop, btnShowDept, btnShowAll);
 
-        btnShowDept.setOnAction(value -> displayCourses(departmentsDrop.getValue()));
+        btnShowDept.setOnAction(value -> displayCourses(Course.getDeptFromName(departmentsDrop.getValue())));
         btnShowAll.setOnAction(value -> displayCourses(null));
 
         Label lblNum = new Label("Course number");
@@ -72,13 +94,16 @@ public class CourseProcessor extends Application {
         fldName.setOnKeyPressed(value -> { if (value.getCode() == KeyCode.ENTER) enterCourse(); });
         fldCred.setOnKeyPressed(value -> { if (value.getCode() == KeyCode.ENTER) enterCourse(); });
 
-        editorControls.addColumn(0, lblNum, fldNum, lblName, fldName, lblCred, fldCred);
+        Button btnEnter = new Button("Enter");
+        btnEnter.setOnAction(value -> enterCourse());
+
+        editorControls.addColumn(0, lblNum, fldNum, lblName, fldName, lblCred, fldCred, btnEnter);
 
         Button btnQuit = new Button("Quit");
         Button btnLoad = new Button("Load");
         Button btnSave = new Button("Save");
 
-        editorControls.addRow(7, btnQuit, btnLoad, btnSave);
+        editorControls.addRow(8, btnSave, btnLoad, btnQuit);
 
         btnSave.setOnAction(value -> serialize());
         btnLoad.setOnAction(value -> readFromFile());
@@ -103,7 +128,7 @@ public class CourseProcessor extends Application {
         ScrollPane scroll = new ScrollPane();
         centersplit.getChildren().addAll(editorControls, scroll);
 
-        courseTable = new TableView<Course>();
+        TableView<Course> courseTable = new TableView<>();
         courseTable.setMinWidth(100);
         courseTable.setItems(selectedCourses);
         TableColumn<Course, String> colDept = new TableColumn<>("Department");
@@ -133,16 +158,16 @@ public class CourseProcessor extends Application {
         Dialog<ButtonType> dialErr = new Dialog<>();
         dialErr.setTitle("Error");
         dialErr.setContentText(message);
-        dialErr.getDialogPane().getButtonTypes().addAll(new ButtonType("Yes", ButtonBar.ButtonData.OK_DONE));
+        dialErr.getDialogPane().getButtonTypes().addAll(new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE));
         dialErr.showAndWait();
-
     }
 
     /**
      * Enter a course to the list from the data supplied
      */
     private void enterCourse() {
-        String chosendept = departmentsDrop.getValue();
+        String chosendept = Course.getDeptFromName(departmentsDrop.getValue());
+
         String name = fldName.getText();
         String num = fldNum.getText();
         String cred = fldCred.getText();
@@ -167,7 +192,7 @@ public class CourseProcessor extends Application {
         }
 
 
-        if (chosendept == null || chosendept.isEmpty()) errmsg = "No department selected";
+        if (chosendept == null || chosendept.isEmpty()) errmsg = "No valid department selected";
         if (name == null || name.isEmpty()) errmsg = "No course name entered";
         if (num == null || num.isEmpty()) errmsg = "No course number entered";
         if (cred == null || cred.isEmpty()) errmsg = "No course credit value entered";
@@ -201,9 +226,8 @@ public class CourseProcessor extends Application {
 
     /**
      * Serialize the courses to a file
-     * @return true on success, false on error
      */
-    private boolean serialize() {
+    private void serialize() {
         String json = new Gson().toJson(courses);
         try {
             FileWriter f = new FileWriter("courses.json");
@@ -212,29 +236,24 @@ public class CourseProcessor extends Application {
         }
         catch (Exception e) {
             System.out.println(e.getMessage());
-            return false;
+            popupError(e.getMessage());
         }
-
-        return true;
     }
 
     /**
      * Read in a list of courses from a file
-     * @return true on success, false on error
      */
-    private boolean readFromFile() {
+    private void readFromFile() {
         try {
             FileReader reader = new FileReader("courses.json");
             List<Course> tempcourses = new Gson().fromJson(reader, new TypeToken<List<Course>>() {}.getType());
             reader.close();
 
             courses = tempcourses;
-
-            return true;
         }
         catch (Exception e) {
             System.out.println(e.getMessage());
-            return false;
+            popupError(e.getMessage());
         }
     }
 }
